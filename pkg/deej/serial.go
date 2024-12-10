@@ -13,7 +13,7 @@ import (
 	"github.com/jacobsa/go-serial/serial"
 	"go.uber.org/zap"
 
-	"github.com/omriharel/deej/pkg/deej/util"
+	"github.com/Hadrik/deej/pkg/deej/util"
 )
 
 // SerialIO provides a deej-aware abstraction layer to managing serial I/O
@@ -109,6 +109,12 @@ func (sio *SerialIO) Start() error {
 	namedLogger.Infow("Connected", "conn", sio.conn)
 	sio.connected = true
 
+	startMessage := "begin"
+	if _, err := sio.conn.Write([]byte(startMessage)); err != nil {
+		namedLogger.Warnw("Failed to send start message", "error", err)
+		return fmt.Errorf("send start message: %w", err)
+	}
+
 	// read lines or await a stop
 	go func() {
 		connReader := bufio.NewReader(sio.conn)
@@ -131,6 +137,12 @@ func (sio *SerialIO) Start() error {
 func (sio *SerialIO) Stop() {
 	if sio.connected {
 		sio.logger.Debug("Shutting down serial connection")
+
+		endMessage := "end"
+		if _, err := sio.conn.Write([]byte(endMessage)); err != nil {
+			sio.logger.Warnw("Failed to send start message", "error", err)
+		}
+
 		sio.stopChannel <- true
 	} else {
 		sio.logger.Debug("Not currently connected, nothing to stop")
